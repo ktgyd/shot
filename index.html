@@ -128,8 +128,10 @@ h1 { margin: 0; font-family: var(--f-display); font-weight: 800; text-transform:
 .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); clip-path: none; font-size: 18px; padding: 10px 22px; }
 .btn.ghost:hover { background: rgba(255,255,255,.1); }
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
-#pbtn { position: fixed; z-index: 60; top: max(12px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border: 1px solid rgba(255,255,255,.28); border-radius: 8px; background: rgba(8,10,14,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); opacity: .8; }
-#pbtn:hover, #pbtn:focus-visible { opacity: 1; border-color: var(--amber); outline: none; }
+#pbtn, #sbtn { position: fixed; z-index: 60; top: max(12px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); width: 38px; height: 38px; padding: 0; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border: 1px solid rgba(255,255,255,.28); border-radius: 8px; background: rgba(8,10,14,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); opacity: .8; }
+#sbtn { left: calc(max(12px, env(safe-area-inset-left, 0px)) + 46px); font-size: 17px; line-height: 1; color: var(--ink); }
+#sbtn.off { opacity: .55; }
+#pbtn:hover, #pbtn:focus-visible, #sbtn:hover, #sbtn:focus-visible { opacity: 1; border-color: var(--amber); outline: none; }
 #pbtn i { display: block; width: 4px; height: 14px; background: var(--ink); border-radius: 1px; }
 #pbtn.on i { width: 0; height: 0; background: none; border-radius: 0; border-left: 12px solid var(--amber); border-top: 8px solid transparent; border-bottom: 8px solid transparent; margin-left: 3px; }
 #pbtn.on i + i { display: none; }
@@ -157,6 +159,7 @@ html, body { overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
   <div class="ammo"><small id="wname">M4 RIFLE</small><div><b class="mono" id="mag">30</b><em class="mono" id="res">/ 120</em></div><div class="slots mono"><span id="s1" class="on">1 M4</span><span id="s2">2 PUMP</span><span id="s3">3 SNIPER</span><span id="s4">4 BLADE</span></div></div>
 </div>
 <button id="pbtn" type="button" aria-label="Pause" title="Pause (P)" hidden><i></i><i></i></button>
+<button id="sbtn" class="off" type="button" aria-label="Sound on" title="Sound (M)" hidden>🔇</button>
 <div id="xh" hidden><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="d"></i></div>
 <div id="hm"><i></i><i></i><i></i><i></i></div>
 <div id="dmg"></div>
@@ -806,7 +809,7 @@ const WEAPONS = [
 ];
 
 /* ---------------- audio ---------------- */
-let AC = null, master = null, noiseBuf = null, muted = false, windG = null;
+let AC = null, master = null, noiseBuf = null, muted = true, windG = null;
 function iosUnlock() {
   try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* ignore */ }
   try {
@@ -1369,7 +1372,7 @@ addEventListener('keydown', (e) => {
   if (state !== 'playing') { if (k === 'enter' && state === 'menu') startGame(); return; }
   if (k === 'p') { setPause(!paused); return; }
   if (k === 'r') startReload(); if (k === '1') swapTo(0); if (k === '2') swapTo(1); if (k === '3') swapTo(2); if (k === '4') swapTo(3);
-  if (k === 'f') { torchOn = !torchOn; torch.visible = torchOn; } if (k === 'm') { muted = !muted; if (master) master.gain.value = muted ? 0 : 0.7; }
+  if (k === 'f') { torchOn = !torchOn; torch.visible = torchOn; } if (k === 'm') toggleSound();
 });
 addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseFire = false; mouseAds = false; });
@@ -1522,10 +1525,15 @@ function setPause(on) {
 }
 $('pbtn').addEventListener('click', (e) => { e.preventDefault(); setPause(!paused); $('pbtn').blur(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+function toggleSound() {
+  muted = !muted; initAudio(); if (master) master.gain.value = muted ? 0 : 0.7;
+  const b = $('sbtn'); b.textContent = muted ? '🔇' : '🔊'; b.classList.toggle('off', muted); b.setAttribute('aria-label', muted ? 'Sound on' : 'Sound off');
+}
+$('sbtn').addEventListener('click', (e) => { e.preventDefault(); toggleSound(); $('sbtn').blur(); });
 let pbShown = null, pbOn = null;
 function syncPauseBtn() {
   const show = state === 'playing', on = paused;
-  if (show !== pbShown) { pbShown = show; $('pbtn').hidden = !show; }
+  if (show !== pbShown) { pbShown = show; $('pbtn').hidden = !show; $('sbtn').hidden = !show; }
   if (on !== pbOn) { pbOn = on; $('pbtn').classList.toggle('on', on); $('pbtn').setAttribute('aria-label', on ? 'Resume' : 'Pause'); }
 }
 $('again').addEventListener('click', startGame);
